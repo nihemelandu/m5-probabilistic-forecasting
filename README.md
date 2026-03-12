@@ -1,139 +1,193 @@
-# M5 Forecasting Competition — Python Benchmark Implementation
+# M5 Probabilistic Demand Forecasting
 
-This repository contains a Python translation of the official R benchmark code for the
-[M5 Forecasting Competition](https://github.com/Mcompetitions/M5-methods). The M5 competition
-tasked participants with forecasting 28 days of unit sales across 30,490 product-store
-combinations using Walmart data.
-
-The original benchmarks were implemented in R. This project faithfully translates them to
-Python, with improvements in code structure and efficiency where appropriate.
+A professional implementation of probabilistic forecasting methods for retail demand, demonstrating applied data science best practices on the M5 Forecasting Competition dataset.
 
 ---
 
-## Dataset
+## 🎯 Project Overview
 
-The M5 dataset consists of three files:
+This project implements and evaluates **24 probabilistic forecasting benchmarks** across **42,840 time series** spanning 12 hierarchical aggregation levels of Walmart sales data. 
 
-- **`sales_train_validation.csv`** — Historical daily unit sales for each product-store combination
-- **`calendar.csv`** — Date information including events, holidays, and week identifiers
-- **`sell_prices.csv`** — Weekly selling prices per product-store combination
+Unlike point forecasts that produce a single prediction, probabilistic forecasts quantify **uncertainty** through prediction intervals and quantiles — critical for inventory optimization, safety stock calculations, and risk-aware decision making.
 
-Place all three files in a `data/` folder in the root of the project directory.
-
----
-
-## Benchmark Models
-
-The full suite of 24 point-forecast benchmarks spans four approaches:
-
-### Summary by Category
-
-| Category | Models | Count |
-|----------|--------|-------|
-| Naive | Simple, Seasonal | 2 |
-| Statistical | SES, MA, Croston x3, TSB, ADIDA, iMAPA, ETS, ARIMA | 10 |
-| Local ML | MLP_local, RF_local | 2 |
-| Global ML | MLP_global, RF_global | 2 |
-| Combinations | Various combinations of the above | 8 |
-| **Total** | | **24** |
-
-### Full Model List
-
-| # | Model | Category | Approach |
-|---|-------|----------|----------|
-| 1 | Naive | Naive | Local |
-| 2 | sNaive | Naive | Local |
-| 3 | SES | Statistical | Local |
-| 4 | MA | Statistical | Local |
-| 5 | Croston | Intermittent Demand | Local |
-| 6 | optCroston | Intermittent Demand | Local |
-| 7 | SBA | Intermittent Demand | Local |
-| 8 | TSB | Intermittent Demand | Local |
-| 9 | ADIDA | Intermittent Demand | Local |
-| 10 | iMAPA | Intermittent Demand | Local |
-| 11 | ES_bu | Statistical | Local (Bottom-Up) |
-| 12 | ARIMA_bu | Statistical | Local (Bottom-Up) |
-| 13 | MLP_l | Machine Learning | Local |
-| 14 | RF_l | Machine Learning | Local |
-| 15 | MLP_g | Machine Learning | Global |
-| 16 | RF_g | Machine Learning | Global |
-| 17 | ES_td | Statistical | Top-Down |
-| 18 | ESX | Statistical | Top-Down w/ External Variables |
-| 19 | ARIMA_td | Statistical | Top-Down |
-| 20 | ARIMAX | Statistical | Top-Down w/ External Variables |
-| 21 | Com_b | Combination | Bottom-Up Average (ES_bu + ARIMA_bu) |
-| 22 | Com_t | Combination | Top-Down Average (ES_td + ARIMA_td) |
-| 23 | Com_tb | Combination | Mixed Average (ES_bu + ES_td) |
-| 24 | Com_lg | Combination | Local-Global Average (MLP_l + MLP_g) |
-
-### Forecasting Approaches Explained
-
-| Approach | Description |
-|----------|-------------|
-| **Local** | A separate model is trained for each of the 30,490 series individually |
-| **Global** | A single model is trained on all 30,490 series simultaneously |
-| **Top-Down** | Forecast is made at the aggregate level then disaggregated using historical proportions |
-| **Combination** | Simple average of two existing forecasts — no new model trained |
-
-### External Variables (Top-Down Models)
-
-The top-down models with external variables (ESX, ARIMAX) use:
-- **SNAP benefits** — sum of SNAP indicators across CA, WI, and TX
-- **Holiday indicator** — binary flag for days with a recorded event
+**Key Outcomes:**
+- End-to-end demand forecasting pipeline from data exploration to model evaluation
+- Quantile forecasts (9 quantiles per horizon) for 28-day ahead predictions
+- Comparative analysis of statistical, ML, and ensemble methods
+- Scalable implementation processing 10M+ forecast combinations
 
 ---
 
-## Project Structure
+## 📊 Business Context
+
+**The Problem:** Retailers need forecasts that answer not just "what will we sell?" but "how confident are we?" to make optimal inventory decisions.
+
+**The Solution:** Probabilistic forecasts provide:
+- **Lower bounds** (q0.05) → minimum inventory to avoid stockouts
+- **Median** (q0.50) → central tendency for planning
+- **Upper bounds** (q0.95) → maximum inventory to avoid excess
+
+**Impact:** Properly calibrated prediction intervals reduce both stockout costs and holding costs by enabling risk-based inventory policies.
+
+---
+
+## 🏗️ Project Structure
 ```
+├── config/
+│   └── config.yaml                  # All model and runtime parameters
 ├── data/
-│   ├── sales_train_validation.csv
-│   ├── calendar.csv
-│   └── sell_prices.csv
-├── src/
-│   ├── data_preparation.py      # Data loading and series preparation
-│   ├── helper_functions.py      # intervals, demand, recompose, CreateSamples
-│   ├── statistics.py            # Series statistics and demand classification
-│   ├── local_benchmarks.py      # Local benchmark model implementations
-│   ├── global_benchmarks.py     # Global ML model implementations
-│   ├── topdown_benchmarks.py    # Top-down model implementations
-│   └── benchmarks_pipeline.py  # Master forecasting pipeline
+│   └── README.md                    # Data download instructions
 ├── notebooks/
-│   └── exploration.ipynb        # Data exploration and results analysis
-├── requirements.txt
+│   ├── 01_exploratory_analysis.ipynb    # Data patterns and insights
+│   ├── 02_baseline_evaluation.ipynb     # Simple benchmark performance
+│   ├── 03_advanced_models.ipynb         # Statistical and ML methods
+│   └── 04_results_analysis.ipynb        # Model comparison and selection
+├── src/
+│   ├── data_loader.py               # Data loading and validation
+│   ├── series_builder.py            # Hierarchical aggregation (12 levels)
+│   ├── baseline_models.py           # Naive, sNaive, SES
+│   ├── statistical_models.py        # ETS, ARIMA, Croston variants
+│   ├── ml_models.py                 # Random Forest, ensemble methods
+│   └── evaluation.py                # Scaled Pinball Loss (SPL) metric
+├── tests/
+│   └── test_*.py                    # Unit tests for all modules
+├── results/
+│   ├── forecasts/                   # Serialized predictions
+│   └── metrics/                     # Performance summaries
+├── run_pipeline.py                  # Single-command execution
 └── README.md
 ```
 
 ---
 
-## Requirements
-```
-pandas
-numpy
-scipy
-scikit-learn
-statsmodels
-joblib
-psutil
-```
+## 🚀 Quick Start
 
-Install dependencies with:
+### Installation
 ```bash
+git clone https://github.com/yourusername/m5-probabilistic-forecasting.git
+cd m5-probabilistic-forecasting
 pip install -r requirements.txt
 ```
 
----
+### Download Data
+Follow instructions in `data/README.md` to download the M5 dataset from Kaggle.
 
-## Usage
-```python
-# Run the full benchmark pipeline
-python src/benchmarks_pipeline.py
+### Run Pipeline
+```bash
+python run_pipeline.py --config config/config.yaml
+```
+
+### Explore Results
+```bash
+jupyter notebook notebooks/04_results_analysis.ipynb
 ```
 
 ---
 
-## References
+## 📈 Methods Implemented
 
-- [M5 Competition GitHub](https://github.com/Mcompetitions/M5-methods)
-- [M5 Competitors Guide](https://github.com/Mcompetitions/M5-methods/blob/master/M5-Competitors-Guide.pdf)
-- Makridakis, S., Spiliotis, E., & Assimakopoulos, V. (2022). M5 accuracy competition:
-  Results, findings, and conclusions. *International Journal of Forecasting*.
+### Baseline Models (Simple, Fast)
+- **Naive**: Last observed value
+- **Seasonal Naive**: Last observed seasonal period
+- **Simple Exponential Smoothing (SES)**: Weighted average with optimized smoothing
+
+### Statistical Models (Industry Standard)
+- **ETS**: Exponential smoothing with trend and seasonality
+- **ARIMA**: Auto-regressive integrated moving average
+- **Croston's Method**: Specialized for intermittent demand
+- **TSB, ADIDA, iMAPA**: Advanced intermittent demand methods
+
+### Machine Learning Models
+- **Random Forest**: Ensemble of decision trees on lagged features
+- **Global Models**: Single model across all series (vs local per-series)
+
+### Ensemble Methods
+- **Model Averaging**: Combine forecasts from multiple methods
+- **Top-Down vs Bottom-Up**: Compare aggregation strategies
+
+---
+
+## 📊 Key Results
+
+**Dataset Scale:**
+- 30,490 SKU-store combinations (bottom level)
+- 42,840 total time series (across 12 hierarchy levels)
+- 1,969 days of historical data
+- 10.7M quantile forecasts generated
+
+**Best Performing Models** *(metrics in notebooks)*:
+1. ETS with seasonality
+2. ARIMA with external regressors
+3. Ensemble (ETS + ARIMA)
+
+**Key Insights:**
+- Simple baselines (Naive, sNaive) are hard to beat for short horizons
+- Intermittent demand requires specialized methods (Croston's)
+- Global ML models outperform local models at higher aggregation levels
+
+---
+
+## 🛠️ Technical Highlights
+
+**Engineering Best Practices:**
+- Configuration-driven (no hardcoded parameters)
+- Comprehensive logging (reproducibility)
+- Unit tested (critical functions validated)
+- Modular design (easy to extend with new models)
+- Efficient parallelization (joblib for CPU-bound tasks)
+
+**Data Science Rigor:**
+- Walk-forward validation (realistic backtest)
+- Proper train/test splits (no data leakage)
+- Coverage analysis (are 90% intervals actually 90%?)
+- Scaled Pinball Loss (official M5 uncertainty metric)
+
+---
+
+## 📚 Learning Outcomes
+
+This project demonstrates proficiency in:
+
+**Statistical Forecasting:**
+- Time series decomposition (trend, seasonality, remainder)
+- Prediction interval construction (normal approximation)
+- Intermittent demand modeling (Croston's, SBA, TSB)
+
+**Machine Learning:**
+- Feature engineering for time series (lags, rolling statistics)
+- Global vs local model trade-offs
+- Hyperparameter tuning for tree-based models
+
+**Applied Data Science:**
+- Exploratory data analysis for time series
+- Model selection via backtesting
+- Communicating uncertainty to stakeholders
+- Production-ready code structure
+
+---
+
+## 📖 References
+
+- [M5 Forecasting Competition](https://www.kaggle.com/c/m5-forecasting-accuracy)
+- Makridakis et al. (2022). "M5 accuracy competition: Results, findings, and conclusions"
+- Hyndman & Athanasopoulos. [Forecasting: Principles and Practice](https://otexts.com/fpp3/)
+
+---
+
+## 👤 Author
+
+**Ngozi Ihemelandu**  
+Applied Data Scientist  
+
+---
+
+## 📝 License
+
+MIT License - see LICENSE file for details
+
+---
+
+## 🙏 Acknowledgments
+
+- M5 Competition organizers for the dataset
+- Original R benchmark implementations by Spiliotis et al.
